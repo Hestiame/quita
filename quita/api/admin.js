@@ -9,7 +9,7 @@
 //   { action:'set-status', id, status }        → muda status do cliente
 //   { action:'grant', id }                     → cria/ativa cliente do chamado e envia credenciais
 
-const { sb, genCreds } = require('./_lib');
+const { sb, genCreds, fulfillOrder } = require('./_lib');
 
 function authed(b) {
   return b && b.user === process.env.ADMIN_USER && b.pass === process.env.ADMIN_PASS && !!process.env.ADMIN_PASS;
@@ -28,7 +28,16 @@ module.exports = async (req, res) => {
     if (a === 'data') {
       const customers = await sb('customers?select=*&order=created_at.desc');
       const tickets = await sb('tickets?select=*&order=created_at.desc');
-      res.status(200).json({ customers: customers || [], tickets: tickets || [] }); return;
+      const orders = await sb('orders?select=*&order=created_at.desc');
+      res.status(200).json({ customers: customers || [], tickets: tickets || [], orders: orders || [] }); return;
+    }
+
+    if (a === 'approve-order') {
+      const rows = await sb('orders?id=eq.' + encodeURIComponent(b.id) + '&select=*');
+      const order = rows && rows[0];
+      if (!order) { res.status(404).json({ error: 'Pedido não encontrado' }); return; }
+      if (order.status !== 'paid') await fulfillOrder(order);
+      res.status(200).json({ ok: true }); return;
     }
 
     if (a === 'reply') {
