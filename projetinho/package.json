@@ -1,7 +1,0 @@
-{
-  "name": "quita",
-  "private": true,
-  "version": "1.0.0",
-  "description": "Quita — calculadora de rescisão + checkout PIX (GoatPay) + Supabase",
-  "engines": { "node": ">=18" }
-}
