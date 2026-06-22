@@ -1307,17 +1307,26 @@ function onPixPaid(ch, creds){
   setTimeout(()=>{ closeOverlay('checkoutOverlay'); $('#checkoutPix').style.display='none'; $('#checkoutForm').style.display='block'; showCredGate(); },900);
 }
 function enterAppFromSuccess(){ closeOverlay('checkoutOverlay'); enterApp(); }
-function processLogin(){
+async function processLogin(){
   const u=$('#loginUser').value.trim(), p=$('#loginPass').value;
   const err=$('#loginErr'); const btn=$('#loginBtn');
   if(!u||!p){ err.textContent='Preencha usuário e senha.'; err.classList.add('show'); return; }
   err.classList.remove('show');
   btn.innerHTML='<span class="spinner"></span> Entrando…'; btn.disabled=true;
-  setTimeout(()=>{
-    btn.textContent='Entrar'; btn.disabled=false;
-    if(Auth.login({user:u,pass:p})){ err.classList.remove('show'); closeOverlay('loginOverlay'); enterApp(); }
-    else { err.textContent='Usuário ou senha incorretos. Verifique as credenciais geradas na compra.'; err.classList.add('show'); }
-  },800);
+  if(CLOUD){
+    try{
+      const j=await cloudPost('login',{user:u,pass:p});
+      if(j&&j.ok&&j.user){
+        const now=new Date().toISOString();
+        Auth.setUser(Object.assign({credsSaved:true,createdAt:now,lastAccess:now},j.user));
+        btn.innerHTML='Entrar'; btn.disabled=false;
+        closeOverlay('loginOverlay'); enterApp(); return;
+      }
+    }catch(e){ /* 401 (credencial inválida) ou backend offline → tenta local abaixo */ }
+  }
+  btn.innerHTML='Entrar'; btn.disabled=false;
+  if(Auth.login({user:u,pass:p})){ err.classList.remove('show'); closeOverlay('loginOverlay'); enterApp(); }
+  else { err.textContent='Usuário ou senha incorretos. Verifique as credenciais geradas na compra.'; err.classList.add('show'); }
 }
 
 /* ============================================================
